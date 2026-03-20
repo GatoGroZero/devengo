@@ -44,6 +44,13 @@ export function updateEmployee(updatedEmployee: Employee) {
   return nextEmployees;
 }
 
+export function addEmployee(newEmployee: Employee) {
+  const currentEmployees = loadEmployees();
+  const nextEmployees = [...currentEmployees, newEmployee];
+  saveEmployees(nextEmployees);
+  return nextEmployees;
+}
+
 export function resetEmployees() {
   saveEmployees(defaultEmployees);
   return defaultEmployees;
