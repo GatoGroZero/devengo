@@ -1,4 +1,14 @@
-export default function EmpresaPage() {
+import {
+    employees,
+    getCompanyStats,
+    calculateAccrued,
+    calculateAvailable,
+    formatCurrency,
+  } from "@/lib/payroll";
+  
+  export default function EmpresaPage() {
+    const stats = getCompanyStats();
+  
     return (
       <main className="min-h-screen bg-slate-950 text-white px-6 py-10">
         <div className="mx-auto max-w-6xl">
@@ -18,17 +28,21 @@ export default function EmpresaPage() {
           <section className="grid gap-6 md:grid-cols-3 mb-10">
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
               <p className="text-slate-400 text-sm">Empleados activos</p>
-              <h2 className="text-3xl font-bold mt-2">12</h2>
+              <h2 className="text-3xl font-bold mt-2">{stats.activeEmployees}</h2>
             </div>
   
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
               <p className="text-slate-400 text-sm">Saldo devengado hoy</p>
-              <h2 className="text-3xl font-bold mt-2">$8,450 MXN</h2>
+              <h2 className="text-3xl font-bold mt-2">
+                {formatCurrency(stats.totalAccruedToday)}
+              </h2>
             </div>
   
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
               <p className="text-slate-400 text-sm">Retiros pendientes</p>
-              <h2 className="text-3xl font-bold mt-2">4</h2>
+              <h2 className="text-3xl font-bold mt-2">
+                {stats.pendingWithdrawals}
+              </h2>
             </div>
           </section>
   
@@ -46,33 +60,42 @@ export default function EmpresaPage() {
                   <tr>
                     <th className="py-3">Nombre</th>
                     <th className="py-3">Salario diario</th>
+                    <th className="py-3">Días trabajados</th>
                     <th className="py-3">Devengado</th>
                     <th className="py-3">Disponible</th>
                     <th className="py-3">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-4">Luis Hernández</td>
-                    <td className="py-4">$450</td>
-                    <td className="py-4">$1,350</td>
-                    <td className="py-4 text-emerald-400">$675</td>
-                    <td className="py-4">Activo</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-4">Ana Martínez</td>
-                    <td className="py-4">$500</td>
-                    <td className="py-4">$1,000</td>
-                    <td className="py-4 text-emerald-400">$500</td>
-                    <td className="py-4">Activo</td>
-                  </tr>
-                  <tr>
-                    <td className="py-4">Carlos Rivera</td>
-                    <td className="py-4">$380</td>
-                    <td className="py-4">$760</td>
-                    <td className="py-4 text-emerald-400">$380</td>
-                    <td className="py-4">Activo</td>
-                  </tr>
+                  {employees.map((employee) => {
+                    const accrued = calculateAccrued(employee);
+                    const available = calculateAvailable(employee);
+  
+                    return (
+                      <tr key={employee.id} className="border-b border-slate-800">
+                        <td className="py-4">{employee.name}</td>
+                        <td className="py-4">
+                          {formatCurrency(employee.dailySalary)}
+                        </td>
+                        <td className="py-4">{employee.workedDays}</td>
+                        <td className="py-4">{formatCurrency(accrued)}</td>
+                        <td className="py-4 text-emerald-400">
+                          {formatCurrency(available)}
+                        </td>
+                        <td className="py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-sm ${
+                              employee.status === "Activo"
+                                ? "bg-emerald-500/15 text-emerald-400"
+                                : "bg-amber-500/15 text-amber-400"
+                            }`}
+                          >
+                            {employee.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
