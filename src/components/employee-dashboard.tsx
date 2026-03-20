@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Employee,
-  calculateAccrued,
-  calculateAvailable,
-  formatCurrency,
-} from "@/lib/payroll";
+import { Employee, calculateAccrued, formatCurrency } from "@/lib/payroll";
 
 type Props = {
   employee: Employee;
@@ -20,8 +15,8 @@ export default function EmployeeDashboard({ employee }: Props) {
   const [error, setError] = useState("");
 
   const accrued = useMemo(() => {
-    return employee.dailySalary * employee.workedDays;
-  }, [employee.dailySalary, employee.workedDays]);
+    return calculateAccrued(employee);
+  }, [employee]);
 
   const available = useMemo(() => {
     const maxWithdrawable = accrued * employee.maxWithdrawPercent;
@@ -117,6 +112,7 @@ export default function EmployeeDashboard({ employee }: Props) {
               </label>
               <input
                 type="number"
+                step="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={`Máximo ${available}`}
