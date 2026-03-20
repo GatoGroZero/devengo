@@ -1,31 +1,55 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Employee, calculateAccrued, formatCurrency } from "@/lib/payroll";
+import { loadEmployees, updateEmployee } from "@/lib/payroll-storage";
 
 type Props = {
-  employee: Employee;
+  employeeId: string;
 };
 
-export default function EmployeeDashboard({ employee }: Props) {
-  const [withdrawn, setWithdrawn] = useState(employee.withdrawn);
+export default function EmployeeDashboard({ employeeId }: Props) {
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [withdrawn, setWithdrawn] = useState(0);
   const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState(employee.paymentMethod);
+  const [paymentMethod, setPaymentMethod] = useState<
+    "Wallet Devengo" | "Cuenta bancaria"
+  >("Wallet Devengo");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const currentEmployees = loadEmployees();
+    const currentEmployee =
+      currentEmployees.find((item) => item.id === employeeId) ??
+      currentEmployees[0];
+
+    if (currentEmployee) {
+      setEmployee(currentEmployee);
+      setWithdrawn(currentEmployee.withdrawn);
+      setPaymentMethod(currentEmployee.paymentMethod);
+    }
+  }, [employeeId]);
+
   const accrued = useMemo(() => {
+    if (!employee) return 0;
     return calculateAccrued(employee);
   }, [employee]);
 
   const available = useMemo(() => {
+    if (!employee) return 0;
     const maxWithdrawable = accrued * employee.maxWithdrawPercent;
     return Math.max(0, Math.round(maxWithdrawable - withdrawn));
-  }, [accrued, employee.maxWithdrawPercent, withdrawn]);
+  }, [accrued, employee, withdrawn]);
 
   function handleWithdraw() {
     setMessage("");
     setError("");
+
+    if (!employee) {
+      setError("No se pudo cargar el empleado.");
+      return;
+    }
 
     const numericAmount = Number(amount);
 
@@ -44,12 +68,33 @@ export default function EmployeeDashboard({ employee }: Props) {
       return;
     }
 
-    setWithdrawn((prev) => prev + numericAmount);
+    const newWithdrawn = withdrawn + numericAmount;
+
+    const updatedEmployee: Employee = {
+      ...employee,
+      withdrawn: newWithdrawn,
+      paymentMethod,
+    };
+
+    updateEmployee(updatedEmployee);
+    setEmployee(updatedEmployee);
+    setWithdrawn(newWithdrawn);
     setAmount("");
+
     setMessage(
       `Retiro simulado exitoso por ${formatCurrency(
         numericAmount
       )} vía ${paymentMethod}.`
+    );
+  }
+
+  if (!employee) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white px-6 py-10">
+        <div className="mx-auto max-w-4xl">
+          <p className="text-slate-300">Cargando empleado...</p>
+        </div>
+      </main>
     );
   }
 
