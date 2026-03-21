@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   fetchEmployees,
   fetchVaultSummary,
+  resetDemo,
   type ApiEmployee,
   type VaultSummary,
 } from "@/lib/api";
@@ -13,29 +14,42 @@ export default function CompanyDashboard() {
   const [vaultSummary, setVaultSummary] = useState<VaultSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function loadData() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [employeesData, vaultData] = await Promise.all([
+        fetchEmployees(),
+        fetchVaultSummary(),
+      ]);
+
+      setEmployees(employeesData);
+      setVaultSummary(vaultData);
+    } catch {
+      setError("No se pudo cargar la información desde la API.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const [employeesData, vaultData] = await Promise.all([
-          fetchEmployees(),
-          fetchVaultSummary(),
-        ]);
-
-        setEmployees(employeesData);
-        setVaultSummary(vaultData);
-      } catch {
-        setError("No se pudo cargar la información desde la API.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadData();
   }, []);
+
+  async function handleResetDemo() {
+    try {
+      setMessage("");
+      setError("");
+      await resetDemo();
+      await loadData();
+      setMessage("Demo restablecida correctamente.");
+    } catch {
+      setError("No se pudo restablecer la demo.");
+    }
+  }
 
   if (loading) {
     return (
@@ -75,7 +89,7 @@ export default function CompanyDashboard() {
           </p>
         </header>
 
-        <section className="grid gap-6 md:grid-cols-3 mb-10">
+        <section className="grid gap-6 md:grid-cols-4 mb-10">
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <p className="text-slate-400 text-sm">Empleados activos</p>
             <h2 className="text-3xl font-bold mt-2">
@@ -91,6 +105,13 @@ export default function CompanyDashboard() {
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-slate-400 text-sm">Total adelantado</p>
+            <h2 className="text-3xl font-bold mt-2">
+              ${vaultSummary.totalDrawn.toLocaleString("es-MX")} MXN
+            </h2>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <p className="text-slate-400 text-sm">Liquidez disponible</p>
             <h2 className="text-3xl font-bold mt-2 text-emerald-400">
               ${vaultSummary.availableLiquidity.toLocaleString("es-MX")} MXN
@@ -99,9 +120,22 @@ export default function CompanyDashboard() {
         </section>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <div className="mb-6">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-semibold">Empleados</h3>
+
+            <button
+              onClick={handleResetDemo}
+              className="rounded-xl border border-slate-700 px-4 py-2 font-semibold text-white hover:bg-slate-800 transition"
+            >
+              Restablecer demo
+            </button>
           </div>
+
+          {message && (
+            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+              {message}
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -109,6 +143,8 @@ export default function CompanyDashboard() {
                 <tr>
                   <th className="py-3">Nombre</th>
                   <th className="py-3">Salario por ciclo</th>
+                  <th className="py-3">Retirado en ciclo</th>
+                  <th className="py-3">Disponible</th>
                   <th className="py-3">RFC</th>
                   <th className="py-3">Estado</th>
                 </tr>
@@ -119,6 +155,12 @@ export default function CompanyDashboard() {
                     <td className="py-4">{employee.name}</td>
                     <td className="py-4">
                       ${employee.salaryPerCycle.toLocaleString("es-MX")} MXN
+                    </td>
+                    <td className="py-4">
+                      ${employee.drawnThisCycle.toLocaleString("es-MX")} MXN
+                    </td>
+                    <td className="py-4 text-emerald-400">
+                      ${employee.availableAdvance.toLocaleString("es-MX")} MXN
                     </td>
                     <td className="py-4">{employee.rfc}</td>
                     <td className="py-4">

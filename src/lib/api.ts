@@ -6,6 +6,8 @@ export type ApiEmployee = {
   salaryPerCycle: number;
   active: boolean;
   rfc: string;
+  drawnThisCycle: number;
+  availableAdvance: number;
 };
 
 export type VaultSummary = {
@@ -14,6 +16,19 @@ export type VaultSummary = {
   totalFeesCollected: number;
   currentCycle: number;
   availableLiquidity: number;
+  feeBps: number;
+  maxAdvancePctBps: number;
+};
+
+export type AdvanceResponse = {
+  ok: boolean;
+  employeeId: string;
+  requestedAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  newDrawnThisCycle: number;
+  availableAdvance: number;
+  vaultSummary: VaultSummary;
 };
 
 export async function fetchEmployees(): Promise<ApiEmployee[]> {
@@ -48,6 +63,39 @@ export async function fetchVaultSummary(): Promise<VaultSummary> {
 
   if (!response.ok) {
     throw new Error("No se pudo cargar el resumen del vault");
+  }
+
+  return response.json();
+}
+
+export async function requestAdvance(input: {
+  employeeId: string;
+  requestedAmount: number;
+}): Promise<AdvanceResponse> {
+  const response = await fetch(`${API_URL}/advances/request`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message || "No se pudo solicitar el adelanto");
+  }
+
+  return json;
+}
+
+export async function resetDemo() {
+  const response = await fetch(`${API_URL}/demo/reset`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo restablecer la demo");
   }
 
   return response.json();
