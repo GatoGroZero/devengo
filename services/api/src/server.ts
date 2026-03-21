@@ -57,6 +57,20 @@ async function main() {
     };
   });
 
+  app.get("/employees/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const employee = employees.find((item) => item.id === id);
+
+    if (!employee) {
+      return reply.status(404).send({
+        message: "Empleado no encontrado",
+      });
+    }
+
+    return employee;
+  });
+
   app.get("/vault/summary", async () => {
     return vaultSummary;
   });
