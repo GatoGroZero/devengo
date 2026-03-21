@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   fetchEmployees,
   fetchVaultSummary,
   resetDemo,
+  settleCycle,
   type ApiEmployee,
   type VaultSummary,
 } from "@/lib/api";
@@ -16,9 +18,9 @@ export default function CompanyDashboard() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function loadData() {
+  async function loadData(showLoader = true) {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       setError("");
 
       const [employeesData, vaultData] = await Promise.all([
@@ -31,12 +33,18 @@ export default function CompanyDashboard() {
     } catch {
       setError("No se pudo cargar la información desde la API.");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
 
   useEffect(() => {
     loadData();
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, []);
 
   async function handleResetDemo() {
@@ -44,10 +52,22 @@ export default function CompanyDashboard() {
       setMessage("");
       setError("");
       await resetDemo();
-      await loadData();
+      await loadData(false);
       setMessage("Demo restablecida correctamente.");
     } catch {
       setError("No se pudo restablecer la demo.");
+    }
+  }
+
+  async function handleSettleCycle() {
+    try {
+      setMessage("");
+      setError("");
+      await settleCycle();
+      await loadData(false);
+      setMessage("Ciclo liquidado correctamente.");
+    } catch {
+      setError("No se pudo liquidar el ciclo.");
     }
   }
 
@@ -89,11 +109,18 @@ export default function CompanyDashboard() {
           </p>
         </header>
 
-        <section className="grid gap-6 md:grid-cols-4 mb-10">
+        <section className="grid gap-6 md:grid-cols-5 mb-10">
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <p className="text-slate-400 text-sm">Empleados activos</p>
             <h2 className="text-3xl font-bold mt-2">
               {employees.filter((employee) => employee.active).length}
+            </h2>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-slate-400 text-sm">Ciclo actual</p>
+            <h2 className="text-3xl font-bold mt-2">
+              #{vaultSummary.currentCycle}
             </h2>
           </div>
 
@@ -120,20 +147,35 @@ export default function CompanyDashboard() {
         </section>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <h3 className="text-2xl font-semibold">Empleados</h3>
 
-            <button
-              onClick={handleResetDemo}
-              className="rounded-xl border border-slate-700 px-4 py-2 font-semibold text-white hover:bg-slate-800 transition"
-            >
-              Restablecer demo
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleSettleCycle}
+                className="rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950 hover:opacity-90 transition"
+              >
+                Liquidar ciclo
+              </button>
+
+              <button
+                onClick={handleResetDemo}
+                className="rounded-xl border border-slate-700 px-4 py-2 font-semibold text-white hover:bg-slate-800 transition"
+              >
+                Restablecer demo
+              </button>
+            </div>
           </div>
 
           {message && (
             <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
               {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+              {error}
             </div>
           )}
 
@@ -147,6 +189,7 @@ export default function CompanyDashboard() {
                   <th className="py-3">Disponible</th>
                   <th className="py-3">RFC</th>
                   <th className="py-3">Estado</th>
+                  <th className="py-3">Portal</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,6 +216,14 @@ export default function CompanyDashboard() {
                       >
                         {employee.active ? "Activo" : "Inactivo"}
                       </span>
+                    </td>
+                    <td className="py-4">
+                      <Link
+                        href={`/empleado/${employee.id}`}
+                        className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+                      >
+                        Abrir
+                      </Link>
                     </td>
                   </tr>
                 ))}

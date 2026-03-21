@@ -183,6 +183,21 @@ async function main() {
     };
   });
 
+  app.post("/vault/settle-cycle", async () => {
+    vaultSummary.currentCycle += 1;
+
+    employees = employees.map((employee) => ({
+      ...employee,
+      drawnThisCycle: 0,
+    }));
+
+    return {
+      ok: true,
+      message: "Ciclo liquidado correctamente",
+      currentCycle: vaultSummary.currentCycle,
+    };
+  });
+
   app.post("/demo/reset", async () => {
     employees = structuredClone(initialEmployees);
     vaultSummary = {

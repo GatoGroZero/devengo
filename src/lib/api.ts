@@ -89,6 +89,20 @@ export async function requestAdvance(input: {
   return json;
 }
 
+export async function settleCycle() {
+  const response = await fetch(`${API_URL}/vault/settle-cycle`, {
+    method: "POST",
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message || "No se pudo liquidar el ciclo");
+  }
+
+  return json;
+}
+
 export async function resetDemo() {
   const response = await fetch(`${API_URL}/demo/reset`, {
     method: "POST",
