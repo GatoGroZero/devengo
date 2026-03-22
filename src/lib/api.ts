@@ -138,6 +138,30 @@ export async function createEmployeeRequest(input: {
 
   return json;
 }
+export async function createCompanyEmployee(input: {
+  name: string;
+  role: string;
+  branch: string;
+  hireDate: string;
+  salaryPerCycle: number;
+  rfc: string;
+}) {
+  const response = await fetch(`${API_URL}/app/company/employees`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json.message || "No se pudo agregar el empleado.");
+  }
+
+  return json;
+}
 
 export async function approveCompanyRequest(requestId: string) {
   const response = await fetch(`${API_URL}/app/company/requests/${requestId}/approve`, {

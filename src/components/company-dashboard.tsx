@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import TopNav from "@/components/top-nav";
 import {
   approveCompanyRequest,
+  createCompanyEmployee,
   fetchCompanyDashboard,
   rejectCompanyRequest,
   settleCompanyCycle,
@@ -64,6 +65,15 @@ export default function CompanyDashboard() {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [creatingEmployee, setCreatingEmployee] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState({
+    name: "",
+    role: "",
+    branch: "",
+    hireDate: "",
+    salaryPerCycle: "",
+    rfc: "",
+  });
 
   async function loadData(showLoader = true) {
     try {
@@ -173,6 +183,62 @@ export default function CompanyDashboard() {
           ? err.message
           : "No se pudo rechazar la solicitud.";
       setError(msg);
+    }
+  }
+
+  async function handleCreateEmployee() {
+    try {
+      setError("");
+      setMessage("");
+      setCreatingEmployee(true);
+
+      if (
+        !employeeForm.name.trim() ||
+        !employeeForm.role.trim() ||
+        !employeeForm.branch.trim() ||
+        !employeeForm.hireDate.trim() ||
+        !employeeForm.salaryPerCycle.trim() ||
+        !employeeForm.rfc.trim()
+      ) {
+        setError("Completa todos los campos del empleado.");
+        return;
+      }
+
+      const salary = Number(employeeForm.salaryPerCycle);
+
+      if (Number.isNaN(salary) || salary <= 0) {
+        setError("El salario por ciclo debe ser válido.");
+        return;
+      }
+
+      await createCompanyEmployee({
+        name: employeeForm.name.trim(),
+        role: employeeForm.role.trim(),
+        branch: employeeForm.branch.trim(),
+        hireDate: employeeForm.hireDate,
+        salaryPerCycle: salary,
+        rfc: employeeForm.rfc.trim().toUpperCase(),
+      });
+
+      setEmployeeForm({
+        name: "",
+        role: "",
+        branch: "",
+        hireDate: "",
+        salaryPerCycle: "",
+        rfc: "",
+      });
+
+      await loadData(false);
+      setMessage("Empleado agregado correctamente.");
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "No se pudo agregar el empleado.";
+      setError(msg);
+    } finally {
+      setCreatingEmployee(false);
     }
   }
 
@@ -315,6 +381,85 @@ export default function CompanyDashboard() {
               {error}
             </div>
           )}
+
+          <section className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+            <div className="mb-5">
+              <h3 className="text-2xl font-semibold">Alta rápida de empleado</h3>
+              <p className="mt-2 text-slate-300">
+                RH puede registrar empleados nuevos y ver su elegibilidad al instante.
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <input
+                value={employeeForm.name}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                placeholder="Nombre completo"
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+
+              <input
+                value={employeeForm.role}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({ ...prev, role: e.target.value }))
+                }
+                placeholder="Puesto"
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+
+              <input
+                value={employeeForm.branch}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({ ...prev, branch: e.target.value }))
+                }
+                placeholder="Sucursal"
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+
+              <input
+                type="date"
+                value={employeeForm.hireDate}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({ ...prev, hireDate: e.target.value }))
+                }
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+
+              <input
+                type="number"
+                value={employeeForm.salaryPerCycle}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({
+                    ...prev,
+                    salaryPerCycle: e.target.value,
+                  }))
+                }
+                placeholder="Salario por ciclo"
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+
+              <input
+                value={employeeForm.rfc}
+                onChange={(e) =>
+                  setEmployeeForm((prev) => ({ ...prev, rfc: e.target.value }))
+                }
+                placeholder="RFC"
+                className="rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white uppercase outline-none focus:border-emerald-400"
+              />
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleCreateEmployee}
+                disabled={creatingEmployee}
+                className="rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:opacity-90 disabled:opacity-60"
+              >
+                {creatingEmployee ? "Agregando..." : "Agregar empleado"}
+              </button>
+            </div>
+          </section>
 
           <section className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
             <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">

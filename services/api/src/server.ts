@@ -73,7 +73,7 @@ const companyPolicies = {
   ],
 };
 
-const employeeDirectory: EmployeeBase[] = [
+let employeeDirectory: EmployeeBase[] = [
   {
     id: "emp-001",
     name: "Luis Hernández",
@@ -232,6 +232,30 @@ const rejectRequestSchema = z.object({
   reviewedBy: z.string().min(2).default("Laura RH"),
   rejectionReason: z.string().min(5).max(160),
 });
+
+const createEmployeeSchema = z.object({
+  name: z.string().min(3).max(80),
+  role: z.string().min(2).max(80),
+  branch: z.string().min(2).max(80),
+  hireDate: z.string().min(10).max(10),
+  salaryPerCycle: z.number().int().positive(),
+  rfc: z.string().min(10).max(13),
+});
+
+function calculateTenureYearsFromHireDate(hireDate: string) {
+  const today = new Date();
+  const start = new Date(`${hireDate}T00:00:00`);
+
+  let years = today.getFullYear() - start.getFullYear();
+
+  const beforeAnniversary =
+    today.getMonth() < start.getMonth() ||
+    (today.getMonth() === start.getMonth() && today.getDate() < start.getDate());
+
+  if (beforeAnniversary) years -= 1;
+
+  return Math.max(0, years);
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -524,6 +548,55 @@ async function main() {
 
   app.get("/app/company/dashboard", async () => {
     return buildCompanyDashboard();
+  });
+
+  app.post("/app/company/employees", async (request, reply) => {
+    const parsed = createEmployeeSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.status(400).send({
+        message: "Datos inválidos para crear empleado.",
+        issues: parsed.error.flatten(),
+      });
+    }
+
+    const duplicatedRfc = employeeDirectory.find(
+      (employee) => employee.rfc.toUpperCase() === parsed.data.rfc.toUpperCase()
+    );
+
+    if (duplicatedRfc) {
+      return reply.status(400).send({
+        message: "Ya existe un empleado con ese RFC.",
+      });
+    }
+
+    const tenureYears = calculateTenureYearsFromHireDate(parsed.data.hireDate);
+    const nextIndex = employeeDirectory.length + 1;
+
+    const newEmployee: EmployeeBase = {
+      id: `emp-${String(nextIndex).padStart(3, "0")}`,
+      name: parsed.data.name,
+      role: parsed.data.role,
+      branch: parsed.data.branch,
+      hireDate: parsed.data.hireDate,
+      tenureYears,
+      salaryPerCycle: parsed.data.salaryPerCycle,
+      active: true,
+      rfc: parsed.data.rfc.toUpperCase(),
+      mockDrawnThisCycle: 0,
+      mockAccruedProgress: 0.35,
+    };
+
+    employeeDirectory.unshift(newEmployee);
+
+    const dashboard = await buildCompanyDashboard();
+
+    return {
+      ok: true,
+      message: "Empleado agregado correctamente.",
+      employee: newEmployee,
+      dashboard,
+    };
   });
 
   app.get("/app/employee/bob", async () => {
