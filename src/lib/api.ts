@@ -26,6 +26,7 @@ export type CompanyEmployee = {
   eligibilityReason: string;
   drawnThisCycle: number;
   availableToday: number;
+  nextPayDate: string;
   requestsLastFive: Array<{
     id: string;
     status: "Pendiente" | "Aprobada" | "Rechazada";
@@ -69,6 +70,7 @@ export type CompanyDashboardResponse = {
   policies: CompanyPolicy;
   summary: {
     currentCycle: number;
+    nextPayDate: string;
     fundAvailable: number;
     totalAdvanced: number;
     totalFees: number;

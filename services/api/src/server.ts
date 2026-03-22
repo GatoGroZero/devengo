@@ -241,6 +241,13 @@ function createId(prefix: string) {
   return `${prefix}-${Date.now()}`;
 }
 
+function getNextPayDate(cycleNumber: number) {
+  const baseDate = new Date("2026-03-31T09:00:00.000Z");
+  const nextPayDate = new Date(baseDate);
+  nextPayDate.setUTCDate(baseDate.getUTCDate() + (cycleNumber - 1) * 15);
+  return nextPayDate.toISOString();
+}
+
 function getEligibilityPercent(tenureYears: number) {
   if (tenureYears < 1) return 0;
   if (tenureYears < 2) return 20;
@@ -314,11 +321,12 @@ function addNotification(employeeId: string, title: string, message: string) {
   });
 }
 
-async function buildEmployeeView(base: EmployeeBase) {
+async function buildEmployeeView(base: EmployeeBase, currentCycle: number) {
   const eligibilityPercent = getEligibilityPercent(base.tenureYears);
   const eligible = base.active && eligibilityPercent > 0;
   const eligibilityReason = getEligibilityReason(base.tenureYears, base.active);
   const recentRequests = getRecentRequestsByEmployee(base.id, 5);
+  const nextPayDate = getNextPayDate(currentCycle);
 
   if (base.onchainAlias && base.onchainAddress) {
     const onchainEmployee = await getOnchainEmployee({
@@ -349,6 +357,7 @@ async function buildEmployeeView(base: EmployeeBase) {
       eligibilityReason,
       drawnThisCycle,
       availableToday,
+      nextPayDate,
       requestsLastFive: recentRequests.map((request) => ({
         id: request.id,
         status: request.status,
@@ -385,6 +394,7 @@ async function buildEmployeeView(base: EmployeeBase) {
     eligibilityReason,
     drawnThisCycle,
     availableToday,
+    nextPayDate,
     requestsLastFive: recentRequests.map((request) => ({
       id: request.id,
       status: request.status,
@@ -400,7 +410,10 @@ async function buildEmployeeView(base: EmployeeBase) {
 
 async function buildCompanyDashboard() {
   const vault = await getOnchainVaultSummary();
-  const employees = await Promise.all(employeeDirectory.map(buildEmployeeView));
+  const currentCycle = vault.currentCycle;
+  const employees = await Promise.all(
+    employeeDirectory.map((employee) => buildEmployeeView(employee, currentCycle))
+  );
 
   const pendingRequests = advanceRequests.filter(
     (request) => request.status === "Pendiente"
@@ -417,6 +430,7 @@ async function buildCompanyDashboard() {
     policies: companyPolicies,
     summary: {
       currentCycle: vault.currentCycle,
+      nextPayDate: getNextPayDate(vault.currentCycle),
       fundAvailable: vault.availableLiquidity,
       totalAdvanced: vault.totalDrawn,
       totalFees: vault.totalFeesCollected,
@@ -451,7 +465,8 @@ async function main() {
 
   app.get("/onchain/employee/bob", async () => {
     const bob = employeeDirectory[0];
-    const employee = await buildEmployeeView(bob);
+    const vault = await getOnchainVaultSummary();
+    const employee = await buildEmployeeView(bob, vault.currentCycle);
 
     return {
       id: employee.id,
@@ -464,6 +479,7 @@ async function main() {
       totalFeesPaid: 0,
       rfc: employee.rfc,
       availableAdvance: employee.availableToday,
+      nextPayDate: employee.nextPayDate,
     };
   });
 
@@ -502,6 +518,7 @@ async function main() {
       ok: true,
       message: "Ciclo liquidado on-chain correctamente",
       vault,
+      nextPayDate: getNextPayDate(vault.currentCycle),
     };
   });
 
@@ -511,7 +528,8 @@ async function main() {
 
   app.get("/app/employee/bob", async () => {
     const bob = employeeDirectory[0];
-    const employee = await buildEmployeeView(bob);
+    const vault = await getOnchainVaultSummary();
+    const employee = await buildEmployeeView(bob, vault.currentCycle);
 
     return {
       employee,
@@ -531,8 +549,8 @@ async function main() {
     }
 
     const bob = employeeDirectory[0];
-    const employee = await buildEmployeeView(bob);
     const vault = await getOnchainVaultSummary();
+    const employee = await buildEmployeeView(bob, vault.currentCycle);
     const approvedThisCycle = advanceRequests.filter(
       (item) =>
         item.employeeId === bob.id &&
@@ -631,7 +649,8 @@ async function main() {
       });
     }
 
-    const employee = await buildEmployeeView(employeeBase);
+    const currentVault = await getOnchainVaultSummary();
+    const employee = await buildEmployeeView(employeeBase, currentVault.currentCycle);
 
     if (targetRequest.requestedAmount > employee.availableToday) {
       return reply.status(400).send({
@@ -663,7 +682,10 @@ async function main() {
       )} fue aprobado.`
     );
 
-    const updatedEmployee = await buildEmployeeView(employeeBase);
+    const updatedEmployee = await buildEmployeeView(
+      employeeBase,
+      execution.currentCycle
+    );
     const dashboard = await buildCompanyDashboard();
 
     return {
@@ -754,6 +776,7 @@ async function main() {
       ok: true,
       message: "Quincena cerrada correctamente.",
       vault,
+      nextPayDate: getNextPayDate(vault.currentCycle),
     };
   });
 

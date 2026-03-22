@@ -18,6 +18,14 @@ function dateShort(value: string) {
   });
 }
 
+function payDate(value: string) {
+  return new Date(value).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function requestStatusClass(status: "Pendiente" | "Aprobada" | "Rechazada") {
   if (status === "Aprobada") {
     return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
@@ -28,6 +36,12 @@ function requestStatusClass(status: "Pendiente" | "Aprobada" | "Rechazada") {
   }
 
   return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+}
+
+function requestStatusText(status: "Pendiente" | "Aprobada" | "Rechazada") {
+  if (status === "Aprobada") return "Aprobada";
+  if (status === "Rechazada") return "Rechazada";
+  return "Pendiente de revisión";
 }
 
 export default function EmployeeDashboard() {
@@ -134,6 +148,7 @@ export default function EmployeeDashboard() {
   const { employee, requests, notifications } = data;
   const phoneNotifications = notifications.slice(0, 2);
   const phoneTopPadding = phoneNotifications.length > 0 ? "pt-52" : "pt-16";
+  const lastRequest = requests[0] ?? null;
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 px-4 py-10 text-white">
@@ -220,8 +235,8 @@ export default function EmployeeDashboard() {
                     <h1 className="text-3xl font-bold">PayStream</h1>
 
                     <p className="mt-2 text-sm text-slate-300">
-                      Hola, {employee.name.split(" ")[0]}. Revisa tu disponible y
-                      envía solicitudes de adelanto.
+                      Hola, {employee.name.split(" ")[0]}. Revisa tu disponible,
+                      tu estado actual y envía solicitudes.
                     </p>
                   </div>
                 </section>
@@ -249,10 +264,51 @@ export default function EmployeeDashboard() {
                   </div>
 
                   <div className="rounded-[24px] border border-slate-800 bg-slate-900 p-4">
-                    <p className="text-xs text-slate-400">% permitido</p>
-                    <h2 className="mt-2 text-2xl font-bold text-emerald-300">
-                      {employee.eligibilityPercent}%
+                    <p className="text-xs text-slate-400">Próximo pago</p>
+                    <h2 className="mt-2 text-lg font-bold text-emerald-300">
+                      {payDate(employee.nextPayDate)}
                     </h2>
+                  </div>
+                </section>
+
+                <section className="mt-4 rounded-[28px] border border-slate-800 bg-slate-900 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                        Estado actual
+                      </p>
+                      <h3 className="mt-2 text-xl font-semibold">
+                        {lastRequest
+                          ? requestStatusText(lastRequest.status)
+                          : "Sin solicitudes activas"}
+                      </h3>
+                    </div>
+
+                    {lastRequest ? (
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs ${requestStatusClass(
+                          lastRequest.status
+                        )}`}
+                      >
+                        {lastRequest.status}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <p className="text-xs text-slate-400">% permitido</p>
+                      <p className="mt-2 text-xl font-semibold text-emerald-300">
+                        {employee.eligibilityPercent}%
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                      <p className="text-xs text-slate-400">Último monto</p>
+                      <p className="mt-2 text-xl font-semibold">
+                        {lastRequest ? money(lastRequest.requestedAmount) : "—"}
+                      </p>
+                    </div>
                   </div>
                 </section>
 
@@ -286,15 +342,15 @@ export default function EmployeeDashboard() {
                 )}
 
                 <section className="mt-4 rounded-[28px] border border-slate-800 bg-slate-900 p-5">
-                  <h3 className="text-xl font-semibold">Pedir adelanto</h3>
+                  <h3 className="text-xl font-semibold">Solicitar adelanto</h3>
                   <p className="mt-2 text-sm text-slate-300">
-                    Envía tu solicitud y RH la revisará antes de liberarla.
+                    Envía tu solicitud y RH la revisará antes de autorizarla.
                   </p>
 
                   <div className="mt-4 space-y-4">
                     <div>
                       <label className="mb-2 block text-sm text-slate-300">
-                        Monto solicitado
+                        ¿Cuánto necesitas?
                       </label>
                       <input
                         value={amount}
@@ -307,7 +363,7 @@ export default function EmployeeDashboard() {
 
                     <div>
                       <label className="mb-2 block text-sm text-slate-300">
-                        Motivo
+                        ¿Para qué lo necesitas?
                       </label>
                       <textarea
                         value={reason}
@@ -328,7 +384,7 @@ export default function EmployeeDashboard() {
                 </section>
 
                 <section className="mt-4 rounded-[28px] border border-slate-800 bg-slate-900 p-5">
-                  <h3 className="text-xl font-semibold">Tus últimas solicitudes</h3>
+                  <h3 className="text-xl font-semibold">Historial reciente</h3>
 
                   <div className="mt-4 space-y-3">
                     {requests.length === 0 ? (
