@@ -244,7 +244,7 @@ function createId(prefix: string) {
 function getNextPayDate(cycleNumber: number) {
   const baseDate = new Date("2026-03-31T09:00:00.000Z");
   const nextPayDate = new Date(baseDate);
-  nextPayDate.setUTCDate(baseDate.getUTCDate() + (cycleNumber - 1) * 15);
+  nextPayDate.setUTCDate(baseDate.getUTCDate() + (cycleNumber - 1) * 14);
   return nextPayDate.toISOString();
 }
 
