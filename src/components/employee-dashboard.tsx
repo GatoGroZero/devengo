@@ -156,6 +156,12 @@ export default function EmployeeDashboard() {
   const phoneNotifications = notifications.slice(0, 2);
   const phoneTopPadding = phoneNotifications.length > 0 ? "pt-52" : "pt-16";
   const lastRequest = requests[0] ?? null;
+  const lastApprovedRequest =
+    requests.find((request) => request.status === "Aprobada") ?? null;
+
+  const depositedGrossAmount = lastApprovedRequest?.requestedAmount ?? null;
+  const depositedFeeAmount = lastApprovedRequest?.execution?.feeAmount ?? null;
+  const depositedNetAmount = lastApprovedRequest?.execution?.netAmount ?? null;
 
   return (
     <>
@@ -314,12 +320,65 @@ export default function EmployeeDashboard() {
                       </div>
 
                       <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                        <p className="text-xs text-slate-400">Último monto</p>
+                        <p className="text-xs text-slate-400">Último monto pedido</p>
                         <p className="mt-2 text-xl font-semibold">
                           {lastRequest ? money(lastRequest.requestedAmount) : "—"}
                         </p>
                       </div>
                     </div>
+                  </section>
+
+                  <section className="mt-4 rounded-[28px] border border-slate-800 bg-slate-900 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                          Estado del depósito
+                        </p>
+                        <h3 className="mt-2 text-xl font-semibold">
+                          {lastApprovedRequest
+                            ? "Transferencia completada"
+                            : lastRequest?.status === "Pendiente"
+                            ? "Pendiente de aprobación"
+                            : lastRequest?.status === "Rechazada"
+                            ? "No enviado"
+                            : "Sin movimiento activo"}
+                        </h3>
+                      </div>
+
+                      <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+                        Cuenta •••• 4821
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-xs text-slate-400">Solicitado</p>
+                        <p className="mt-2 text-lg font-semibold">
+                          {depositedGrossAmount !== null
+                            ? money(depositedGrossAmount)
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-xs text-slate-400">Comisión</p>
+                        <p className="mt-2 text-lg font-semibold text-amber-300">
+                          {depositedFeeAmount !== null
+                            ? money(depositedFeeAmount)
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-xs text-slate-400">Recibido</p>
+                        <p className="mt-2 text-lg font-semibold text-emerald-400">
+                          {depositedNetAmount !== null
+                            ? money(depositedNetAmount)
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+
                   </section>
 
                   <section className="mt-4 rounded-[28px] border border-slate-800 bg-slate-900 p-5">
@@ -423,6 +482,17 @@ export default function EmployeeDashboard() {
                             <p className="mt-3 text-sm text-slate-300">
                               {request.reason}
                             </p>
+
+                            {request.status === "Aprobada" && request.execution && (
+                              <div className="mt-3 rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-3 text-sm text-slate-300">
+                                <p>Solicitado: {money(request.requestedAmount)}</p>
+                                <p>Comisión: {money(request.execution.feeAmount)}</p>
+                                <p className="font-semibold text-emerald-300">
+                                  Recibido: {money(request.execution.netAmount)}
+                                </p>
+                              </div>
+                            )}
+
                             <p className="mt-2 text-xs text-slate-500">
                               {dateShort(request.createdAt)}
                             </p>
